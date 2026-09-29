@@ -9,24 +9,14 @@ const BASE = `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}`
 
 /* ── Low-level send ── */
 async function tgSend(chatId, text, extra = {}) {
-  try {
-    const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 5000)
-    const res = await fetch(`${BASE}/sendMessage`, {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ chat_id: chatId, text, parse_mode: 'HTML', ...extra }),
-      signal: controller.signal,
-    })
-    clearTimeout(timeoutId)
-    const data = await res.json()
-    if (!data.ok) console.error('Telegram error:', data)
-    return data
-  } catch (err) {
-    if (err.name === 'AbortError') console.error('Telegram API timeout')
-    else console.error('Telegram fetch error:', err.message)
-    return { ok: false }
-  }
+  const res = await fetch(`${BASE}/sendMessage`, {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ chat_id: chatId, text, parse_mode: 'HTML', ...extra }),
+  })
+  const data = await res.json()
+  if (!data.ok) console.error('Telegram error:', data)
+  return data
 }
 
 /* ── Edit an existing message ── */

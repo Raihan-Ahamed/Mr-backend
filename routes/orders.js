@@ -29,15 +29,11 @@ router.post('/', async (req, res) => {
       total,
     })
 
-    /* Owner কে Telegram এ notify করো (failure হলে order এরো বাদেও সফল থাকবে) */
-    try {
-      const msgId = await notifyOwnerNewOrder(order)
-      if (msgId) {
-        order.ownerTgMsgId = msgId
-        await order.save()
-      }
-    } catch (tgErr) {
-      console.error('Telegram notification failed (order still saved):', tgErr.message)
+    /* Owner কে Telegram এ notify করো */
+    const msgId = await notifyOwnerNewOrder(order)
+    if (msgId) {
+      order.ownerTgMsgId = msgId
+      await order.save()
     }
 
     res.status(201).json({ ok: true, orderNumber: order.orderNumber })
