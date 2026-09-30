@@ -5,6 +5,8 @@ import mongoose from 'mongoose'
 import path from 'path'
 import { v2 as cloudinary } from 'cloudinary'
 
+import categoryRoutes from './routes/categories.js'
+import deliveryRoutes from './routes/delivery.js'
 import authRoutes     from './routes/auth.js'
 import menuRoutes     from './routes/menu.js'
 import settingsRoutes from './routes/settings.js'
@@ -24,6 +26,8 @@ app.use(cors({ origin: process.env.FRONTEND_URL || '*' }))
 app.use(express.json())
 
 /* ── Routes ── */
+app.use('/api/categories', categoryRoutes)
+app.use('/api/delivery', deliveryRoutes)
 app.use('/api/auth',     authRoutes)
 app.use('/api/menu',     menuRoutes)
 app.use('/api/settings', settingsRoutes)
