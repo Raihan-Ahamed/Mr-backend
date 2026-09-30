@@ -763,6 +763,9 @@
           <button class="tab" onclick="switchTab('riders', this)">
             🚴 Riders
           </button>
+          <button class="tab" onclick="switchTab('categories', this)">
+            📂 Categories
+          </button>
           <button class="tab" onclick="switchTab('zones', this)">
             🗺️ Delivery Zones
           </button>
@@ -864,13 +867,21 @@
           <div class="riders-grid" id="riders-grid"></div>
         </div>
 
+        <!-- ─── CATEGORIES TAB ─── -->
+        <div id="tab-categories" style="display: none">
+          <h3 style="margin-bottom: 16px">Categories</h3>
+          <div class="grid" id="categories-grid"></div>
+        </div>
         <!-- ─── ZONES TAB ─── -->
         <div id="tab-zones" style="display: none">
-          <h3 style="margin-bottom: 16px">Delivery Zones ও চার্জ</h3>
-          <div class="zone-list" id="zones-list"></div>
-        </div>
-      </div>
-    </div>
+  <h3 style="margin-bottom: 16px">Delivery Zones ও চার্জ</h3>
+  <div class="zone-list" id="zones-list"></div>
+  <div style="margin-top: 20px; max-width: 500px; display: flex; gap: 8px">
+    <input type="text" id="new-zone-name" placeholder="নতুন এলাকার নাম" style="flex: 1" />
+    <input type="number" id="new-zone-charge" placeholder="চার্জ ৳" style="width: 100px" />
+    <button class="btn btn-gold" onclick="addZone()">➕ যোগ করো</button>
+  </div>
+</div>
 
     <!-- ═══════ EDIT MODAL ═══════ -->
     <div class="modal-overlay" id="modal-overlay" onclick="closeModal(event)">
@@ -1009,6 +1020,34 @@
       </div>
     </div>
 
+    <!-- ═══════ CATEGORY MODAL ═══════ -->
+<div class="modal-overlay" id="cat-modal-overlay" onclick="closeCatModal(event)">
+  <div class="modal" onclick="event.stopPropagation()" style="max-width: 420px">
+    <h2 id="cat-modal-title">Category Edit করুন</h2>
+
+    <label>নাম</label>
+    <input type="text" id="c-name" />
+
+    <label>Icon (ইমোজি, ছবি না দিলে এটা দেখাবে)</label>
+    <input type="text" id="c-icon" placeholder="🍕" />
+
+    <label>ছবি (Image)</label>
+    <div class="upload-area" onclick="document.getElementById('c-img').click()">
+      <div style="color: var(--muted); font-size: 0.85rem">📸 ক্লিক করে ছবি বেছে নিন</div>
+      <input type="file" id="c-img" accept="image/*" onchange="previewCatImg(this)" />
+      <img id="c-img-preview" class="upload-preview" />
+    </div>
+    <div id="current-cat-img-row" style="display: none; margin-top: 8px">
+      <small style="color: var(--muted)">বর্তমান ছবি:</small>
+      <img id="current-cat-img" style="width: 100%; max-height: 120px; object-fit: cover; border-radius: 8px; margin-top: 4px" />
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeCatModal()">বাতিল</button>
+      <button class="btn btn-gold" onclick="saveCategory()">💾 সংরক্ষণ করুন</button>
+    </div>
+  </div>
+</div>
     <!-- ═══════ RIDER MODAL ═══════ -->
     <div
       class="modal-overlay"
@@ -1068,8 +1107,10 @@
 
       let TOKEN = localStorage.getItem("mrd_token") || "";
       let allItems = [];
-      let allZones = [];
-      let editingId = null;
+let allZones = [];
+let allCategories = [];
+let editingId = null;
+let editingCatId = null;
 
       /* ── helpers ── */
       const $ = (id) => document.getElementById(id);
@@ -1162,14 +1203,14 @@
           }
 
           allItems = await itemsRes.json();
-          allZones = await zonesRes.json();
-          const cats = await catsRes.json();
-          allRiders = await ridersRes.json();
+allZones = await zonesRes.json();
+allCategories = await catsRes.json();
+allRiders = await ridersRes.json();
 
           // Populate category filter
           const cf = $("cat-filter");
           cf.innerHTML = '<option value="">সব category</option>';
-          cats.forEach((c) => {
+         allCategories.forEach((c) => {
             const o = document.createElement("option");
             o.value = c.id;
             o.textContent = c.icon + " " + c.name;
@@ -1179,8 +1220,9 @@
           $("api-status").textContent = `● ${allItems.length} items loaded`;
           $("api-status").style.color = "var(--green)";
           renderGrid();
-          renderZones();
-          renderRiders();
+renderZones();
+renderCategories();
+renderRiders();
           // Default: Orders tab দেখাও
           loadOrders();
         } catch (err) {
@@ -1393,22 +1435,113 @@
       }
 
       /* ════════════ ZONES ════════════ */
-      function renderZones() {
-        const list = $("zones-list");
-        list.innerHTML = "";
-        allZones.forEach((zone) => {
-          const row = document.createElement("div");
-          row.className = "zone-row";
-          row.innerHTML = `
+      
+        function renderZones() {
+  const list = $("zones-list");
+  list.innerHTML = "";
+  allZones.forEach((zone) => {
+    const row = document.createElement("div");
+    row.className = "zone-row";
+    row.innerHTML = `
       <span class="zone-name">🚴 ${zone.name}</span>
       <span style="color:var(--muted);font-size:.85rem">চার্জ:</span>
       <input type="number" value="${zone.charge}" min="0" style="width:80px"
         onchange="saveZone('${zone.id}',this.value)">
-      <span style="color:var(--gold)">৳</span>`;
-          list.appendChild(row);
-        });
-      }
+      <span style="color:var(--gold)">৳</span>
+      <button class="btn btn-ghost btn-sm" onclick="deleteZone('${zone.id}')">🗑️</button>`;
+    list.appendChild(row);
+  });
+}
+/* ════════════ CATEGORIES ════════════ */
+function renderCategories() {
+  const grid = $("categories-grid");
+  grid.innerHTML = "";
+  allCategories.forEach((cat) => {
+    const el = document.createElement("div");
+    el.className = "item-card";
+    el.innerHTML = `
+      <div class="item-img">
+        ${
+          cat.image
+            ? `<img src="${cat.image}" alt="${cat.name}" loading="lazy">`
+            : `<span>${cat.icon || "🍽️"}</span>`
+        }
+      </div>
+      <div class="item-body">
+        <div class="item-name">${cat.icon || ""} ${cat.name}</div>
+      </div>
+      <div class="item-actions">
+        <button class="btn btn-gold btn-sm" onclick="openEditCat('${cat.id}')">✏️ Edit</button>
+      </div>`;
+    grid.appendChild(el);
+  });
+}
 
+function openEditCat(id) {
+  const cat = allCategories.find((c) => c.id === id);
+  if (!cat) return;
+  editingCatId = id;
+
+  $("cat-modal-title").textContent = "Edit: " + cat.name;
+  $("c-name").value = cat.name || "";
+  $("c-icon").value = cat.icon || "";
+
+  $("c-img-preview").style.display = "none";
+  $("c-img").value = "";
+  if (cat.image) {
+    $("current-cat-img").src = cat.image;
+    $("current-cat-img-row").style.display = "block";
+  } else {
+    $("current-cat-img-row").style.display = "none";
+  }
+
+  $("cat-modal-overlay").classList.add("open");
+}
+
+function closeCatModal(e) {
+  if (!e || e.target === $("cat-modal-overlay")) {
+    $("cat-modal-overlay").classList.remove("open");
+    editingCatId = null;
+  }
+}
+
+function previewCatImg(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const preview = $("c-img-preview");
+  preview.src = URL.createObjectURL(file);
+  preview.style.display = "block";
+}
+
+async function saveCategory() {
+  if (!editingCatId) return;
+
+  const formData = new FormData();
+  formData.append("name", $("c-name").value.trim());
+  formData.append("icon", $("c-icon").value.trim());
+
+  const imgFile = $("c-img").files[0];
+  if (imgFile) formData.append("image", imgFile);
+
+  try {
+    const res = await fetch(`${API}/api/settings/categories/${editingCatId}`, {
+      method: "PATCH",
+      headers: { Authorization: "Bearer " + TOKEN },
+      body: formData,
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Error");
+
+    const idx = allCategories.findIndex((c) => c.id === editingCatId);
+    if (idx !== -1) allCategories[idx] = data.cat;
+
+    closeCatModal();
+    renderCategories();
+    toast("✅ Category সংরক্ষণ হয়েছে!");
+  } catch (err) {
+    toast("❌ Error: " + err.message, true);
+  }
+}
       async function saveZone(id, charge) {
         try {
           const res = await fetch(`${API}/api/settings/zones/${id}`, {
@@ -1422,20 +1555,62 @@
           toast("Zone আপডেট হয়নি", true);
         }
       }
+async function addZone() {
+  const name = $("new-zone-name").value.trim();
+  const charge = $("new-zone-charge").value;
+  if (!name) {
+    toast("এলাকার নাম দিন", true);
+    return;
+  }
+  const id = name.toLowerCase().replace(/\s+/g, "-");
+  try {
+    const res = await fetch(`${API}/api/settings/zones`, {
+      method: "POST",
+      headers: headers(),
+      body: JSON.stringify({ id, name, charge: Number(charge) || 0 }),
+    });
+    if (!res.ok) throw new Error();
+    const data = await res.json();
+    allZones.push(data.zone);
+    renderZones();
+    $("new-zone-name").value = "";
+    $("new-zone-charge").value = "";
+    toast("✅ নতুন এলাকা যোগ হয়েছে");
+  } catch {
+    toast("এলাকা যোগ হয়নি", true);
+  }
+}
 
+async function deleteZone(id) {
+  if (!confirm("এই এলাকাটি মুছে ফেলতে চান?")) return;
+  try {
+    const res = await fetch(`${API}/api/settings/zones/${id}`, {
+      method: "DELETE",
+      headers: headers(),
+    });
+    if (!res.ok) throw new Error();
+    allZones = allZones.filter((z) => z.id !== id);
+    renderZones();
+    toast("✅ এলাকা মুছে ফেলা হয়েছে");
+  } catch {
+    toast("মুছে ফেলা যায়নি", true);
+  }
+}
       /* ════════════ TABS ════════════ */
       function switchTab(name, btn) {
-        document
-          .querySelectorAll(".tab")
-          .forEach((t) => t.classList.remove("active"));
-        btn.classList.add("active");
-        $("tab-menu").style.display = name === "menu" ? "" : "none";
-        $("tab-zones").style.display = name === "zones" ? "" : "none";
-        $("tab-orders").style.display = name === "orders" ? "" : "none";
-        $("tab-riders").style.display = name === "riders" ? "" : "none";
-        if (name === "orders") loadOrders();
-        if (name === "riders") loadRiders();
-      }
+  document
+    .querySelectorAll(".tab")
+    .forEach((t) => t.classList.remove("active"));
+  btn.classList.add("active");
+  $("tab-menu").style.display = name === "menu" ? "" : "none";
+  $("tab-zones").style.display = name === "zones" ? "" : "none";
+  $("tab-orders").style.display = name === "orders" ? "" : "none";
+  $("tab-riders").style.display = name === "riders" ? "" : "none";
+  $("tab-categories").style.display = name === "categories" ? "" : "none";
+  if (name === "orders") loadOrders();
+  if (name === "riders") loadRiders();
+  if (name === "categories") renderCategories();
+}
 
       /* ════════════════════════════════════════
    ORDERS
